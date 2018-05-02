@@ -1,13 +1,15 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string>
 #include <math.h>
 #include <ctype.h>
-#include <queue>
+#include <algorithm>
 
 struct noHeap{
     char cElem;
     bool bNeof;
+    std::ifstream fArquivo;
 
     noHeap(std::string s){
         fArquivo.open(s);
@@ -24,16 +26,11 @@ struct noHeap{
             }
         }
     }
-
-    private: 
-    std::ifstream fArquivo;
 };
-class Comparador{
-    public:
-        int operator() (const noHeap & n1, const noHeap & n2)
-        {
-            return n1.cElem > n2.cElem;
-        }
+struct Comparador{
+    bool operator() (const noHeap & n1, const noHeap & n2){
+        return n1.cElem > n2.cElem;
+    }
 };
 
 struct exSorting{
@@ -43,7 +40,7 @@ struct exSorting{
     int P; //Total de Partições por arquivo
     char Sentinela; //Indica o fim de uma partição no arquivo
     bool alternateIOS;
-    std::priority_queue<noHeap,std::vector<noHeap>,Comparador> minHeap;
+    std::vector<noHeap> minHeap;
 
      //Particição do QuickSort
     int particao(std::vector<char> & vetor, int menor, int maior){
@@ -124,6 +121,7 @@ struct exSorting{
                 percorre_particoes(sOutput, true);
             }
             alternateIOS = !alternateIOS;
+            minHeap.clear();
         }
         percorre_particoes(sName, false);
     }
@@ -131,34 +129,43 @@ struct exSorting{
     void percorre_particoes(std::string sOutput, bool gSentinela){
         if(minHeap.empty()){
             std::string sInput;
+            std::make_heap(minHeap.begin(),minHeap.end(),Comparador());
             for(int i = 0; i < W; i++){
                 sInput = (alternateIOS ? "input" : "output") + std::to_string(i) + ".txt";
                 noHeap no { sInput };
-                minHeap.push(no);
+                minHeap.push_back(no);
+                std::push_heap(minHeap.begin(),minHeap.end(),Comparador());
             }
         } else {
-            
+            for(auto & it : minHeap)
+                it.getElem();
+            std::sort_heap(minHeap.begin(),minHeap.end(),Comparador());
         }
         std::ofstream fOutput(sOutput);
         while(true){
-            noHeap & min = (noHeap &)minHeap.top();
+            noHeap & min = minHeap.front();
             if(min.cElem == Sentinela)
                 break;
             fOutput << min.cElem << '\n';
             min.getElem();
+            std::sort_heap(minHeap.begin(),minHeap.end(),Comparador());
         }
         if(gSentinela)
             fOutput << Sentinela;
 
         fOutput.close();
     }
+
+    //Constructor
+    exSorting(int Mem, int Files){
+        Sentinela = '|';
+        M = Mem;
+        W = Files/2;
+    }
 };
 
 int main(int argc, char **argv){
-    exSorting ex;
-    ex.M = 4;
-    ex.W = 2;
-    ex.Sentinela = '|';
+    exSorting ex{4,4};
     ex.clfInterna("input.txt");
     return 0;
 }
