@@ -8,6 +8,7 @@
 struct ExtSorting{
     int M; //M = Memória de Leitura
     int F; //F = Numero de Arquivos
+    int W;//W = Caminhos F/2 para o merge balanceado de N(F/2) caminhos
     int P; //P = Numero de Partições
     std::string fName; // Arquivo de entrada 
 
@@ -40,7 +41,7 @@ struct ExtSorting{
         std::string sOutput;
         int file;
         quickSort((*part), 0, M-1);
-        if(P < F){
+        if(P < W){
             sOutput = "output" + std::to_string(P) + ".txt";
             std::ofstream fOutput(sOutput.c_str());
             for(int k = 0; k < (*part).size(); k++)
@@ -48,7 +49,8 @@ struct ExtSorting{
             fOutput << "\n";
             fOutput.close();
         } else{
-            file = (F-1 <= 1) ? 1 : (P%(F-1) == 0 ? F-1 : P%(F-1)); // Acha em qual arquivo gravar a partição
+            file = ceil((P/W)) + 1; // Acha em qual arquivo gravar a partição
+            file = (file % W) + 1;
             sOutput = "output" + std::to_string(file) + ".txt";
             std::ofstream fOutput(sOutput.c_str(), std::ios_base::app); 
             for(int k = 0; k < (*part).size(); k++)
@@ -92,7 +94,8 @@ struct ExtSorting{
 
 int main(int argc, char **argv){
     ExtSorting ex;
-    ex.F = 3;
+    ex.F = 4;
+    ex.W = ex.F/2; 
     ex.M = 4;
     ex.fName = "input.txt";
     ex.clfInterna();
