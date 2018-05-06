@@ -8,28 +8,43 @@
 
 struct noHeap{
     char cElem;
-    bool bNeof;
-    std::ifstream fArquivo;
+    bool bRead;
+    std::string sArquivo;
+    int count;
+    int length;
 
     noHeap(std::string s){
-        fArquivo.open(s);
-        bNeof = fArquivo.is_open() && fArquivo.good();
+        sArquivo = s;
         cElem = '|';
+        count = 0;
+        bRead = true;
+        length = -1;
         getElem();
     }
     void getElem(){
-        if(bNeof){
-            cElem = fArquivo.get();
-            if(!fArquivo.good()){
-                bNeof = false;
-                fArquivo.close();
+        if(bRead){
+            std::ifstream fArquivo {sArquivo};
+            if(length < 0){
+                fArquivo.seekg(0, fArquivo.end);
+                length = fArquivo.tellg();
             }
+            fArquivo.seekg(count, fArquivo.beg);
+            if(count < length){
+                fArquivo >> cElem;
+                count += 2;
+            }else{
+                cElem = '|';
+                bRead = 0;
+            }
+            fArquivo.close();
         }
+        else
+            cElem = '|';
     }
 };
 struct Comparador{
     bool operator() (const noHeap & n1, const noHeap & n2){
-        return n1.cElem > n2.cElem;
+        return int(n1.cElem) < int(n2.cElem);
     }
 };
 
@@ -67,15 +82,17 @@ struct exSorting{
     }
 
     // Fase de Classificação da Ordenação Externa
-    void auxClfInterna(std::vector<char> & part, int & nextFile){
+    void auxClfInterna(std::vector<char> & part, int & nextFile, bool gSentinela){
         std::string sOutput; //Arquivo para gravar o vetor
-        sOutput = "input_" + std::to_string(nextFile) + ".txt"; // Na próxima fase serão os 1º inputs =/
+        sOutput = "input" + std::to_string(nextFile) + ".txt"; // Na próxima fase serão os 1º inputs =/
         quickSort(part, 0, part.size() -1);
         std::ofstream fOutput(sOutput, std::ios_base::app);
         for(int j = 0, i = part.size(); j < i; j++)
             fOutput << part[j] << '\n';
+       
+        if(gSentinela)
+            fOutput << Sentinela << '\n';
 
-        fOutput << Sentinela;
         fOutput.close();
         if(nextFile == 0)
             P++;
@@ -97,7 +114,7 @@ struct exSorting{
                     part.push_back(cAtual);
                     i++;
                     if(i == M){
-                        auxClfInterna(part, nextFile);
+                        auxClfInterna(part, nextFile,true);
                         i=0;
                         part.clear();
                         processar = false;
@@ -105,7 +122,7 @@ struct exSorting{
                 }
             }
             if(processar)
-                auxClfInterna(part, nextFile);
+                auxClfInterna(part, nextFile, false);
         } else
             throw std::runtime_error{"Erro na abertura do arquivo de entrada!!"};
     }
@@ -115,43 +132,58 @@ struct exSorting{
     void intercalacao(std::string sName){
         alternateIOS = true;
         std::string sOutput;
-        for(int N = P; N > 1; ceil(N/W)){
-            for(int i = 0; i < N-1; i++){
+        //for(int N = P; N > 1; N = ceil(float(N/W))){
+        int N = P;
+        while(N > 1){
+            for(int i = 0; i < N; i++){
                 sOutput = (alternateIOS ? "output" : "input") + std::to_string(i % W) + ".txt";
-                percorre_particoes(sOutput, true);
+                percorre_particoes(sOutput.c_str(), true);
             }
             alternateIOS = !alternateIOS;
             minHeap.clear();
+            N = ceil((float)N/W);
         }
-        percorre_particoes(sName, false);
+        percorre_particoes(sName.c_str(), false);
     }
 
-    void percorre_particoes(std::string sOutput, bool gSentinela){
+    void clearFiles(){
+        std::string sOutput;
+        for(int i = 0; i < W; i++){
+            sOutput = (alternateIOS ? "output" : "input") + std::to_string(i) + ".txt";
+            std::remove(sOutput.c_str());
+        }
+    }
+
+    void percorre_particoes(const char* sOutput, bool gSentinela){
+        std::ofstream fOutput;
         if(minHeap.empty()){
+            clearFiles();
+            fOutput.open(sOutput);
             std::string sInput;
-            std::make_heap(minHeap.begin(),minHeap.end(),Comparador());
+            //std::make_heap(minHeap.begin(),minHeap.end(),Comparador());
             for(int i = 0; i < W; i++){
                 sInput = (alternateIOS ? "input" : "output") + std::to_string(i) + ".txt";
                 noHeap no { sInput };
-                minHeap.push_back(no);
-                std::push_heap(minHeap.begin(),minHeap.end(),Comparador());
+                minHeap.push_back(noHeap::noHeap(sInput));
+                //std::push_heap(minHeap.begin(),minHeap.end(),Comparador());
             }
         } else {
+            fOutput.open(sOutput, std::ios_base::app);
             for(auto & it : minHeap)
                 it.getElem();
-            std::sort_heap(minHeap.begin(),minHeap.end(),Comparador());
-        }
-        std::ofstream fOutput(sOutput);
+            //std::make_heap(minHeap.begin(),minHeap.end(),Comparador());
+        };
         while(true){
-            noHeap & min = minHeap.front();
-            if(min.cElem == Sentinela)
+            auto min = std::min_element(minHeap.begin(), minHeap.end(), Comparador());
+            //noHeap & min = minHeap.front();
+            if((*min).cElem == Sentinela)
                 break;
-            fOutput << min.cElem << '\n';
-            min.getElem();
-            std::sort_heap(minHeap.begin(),minHeap.end(),Comparador());
+            fOutput << (*min).cElem << '\n';
+            (*min).getElem();
+            //std::make_heap(minHeap.begin(),minHeap.end(),Comparador());
         }
         if(gSentinela)
-            fOutput << Sentinela;
+            fOutput << Sentinela << '\n';
 
         fOutput.close();
     }
@@ -165,7 +197,8 @@ struct exSorting{
 };
 
 int main(int argc, char **argv){
-    exSorting ex{4,4};
+    exSorting ex{2,6};
     ex.clfInterna("input.txt");
+    ex.intercalacao("output.txt");
     return 0;
 }
