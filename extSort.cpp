@@ -168,5 +168,7 @@ void extSort::percorre_particoes(const char *sOutput, bool gSentinela){
 extSort::extSort(int Mem, int Files){
     Sentinela = '|';
     M = Mem;
+    if(Files < 3 && Files % 2 != 0)
+      throw std::runtime_error{"Quantidade de arquivos insuficiente ou incoerente com o algoritmo!!"};
     W = Files / 2;
 }
